@@ -1,0 +1,53 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<arpa/inet.h>
+#include<unistd.h>
+#include<pthread.h>
+
+void *ServerEcho(void *args)
+{
+ int clientFileDiscriptor=(int)args;
+ char str[20];
+
+ read(clientFileDiscriptor,str,20);
+ printf("nreading from client:%s",str);
+ write(clientFileDiscriptor,str,20);
+ printf("nechoing back to client");
+ close(clientFileDiscriptor);
+}
+
+
+int main()
+{
+ struct sockaddr_in sock_var;
+ int serverFileDiscriptor=socket(AF_INET,SOCK_STREAM,0);
+ int clientFileDiscriptor;
+ int i;
+ pthread_t t[20];
+
+ sock_var.sin_addr.s_addr=inet_addr("127.0.0.1");
+ sock_var.sin_port=6999;
+ sock_var.sin_family=AF_INET;
+ if(bind(serverFileDiscriptor,(struct sockaddr*)&sock_var,sizeof(sock_var))>=0)
+ {
+  printf("nsocket has been created");
+  listen(serverFileDiscriptor,0); 
+  while(1)        //loop infinity
+  {
+   for(i=0;i<20;i++)      //can support 20 clients at a time
+   {
+    clientFileDiscriptor=accept(serverFileDiscriptor,NULL,NULL);
+    printf("nConnected to client %dn",clientFileDiscriptor);
+    pthread_create(&t,NULL,ServerEcho,(void *)clientFileDiscriptor);
+   }
+  }
+  close(serverFileDiscriptor);
+ }
+ else{
+  printf("nsocket creation failed");
+ }
+ return 0;
+}
